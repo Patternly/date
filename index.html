@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>A little question…</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&display=swap" rel="stylesheet">
+<style>
+  /* ============================================================
+     EDIT YOUR DETAILS in the CONFIG block near the bottom.
+     ============================================================ */
+  :root{
+    --plum:#31163f; --wine:#7e2a54; --rose:#e8697c;
+    --coral:#ff6f91; --coral-lo:#ff4d75; --cream:#fff4f0;
+  }
+  *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body{ height:100%; margin:0; }
+  body{
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    color:var(--cream);
+    background:
+      radial-gradient(120% 90% at 50% -10%, #45215a 0%, transparent 55%),
+      linear-gradient(170deg, var(--plum) 0%, var(--wine) 52%, var(--rose) 100%);
+    min-height:100dvh; display:flex; align-items:center; justify-content:center;
+    padding:28px; overflow:hidden; text-align:center; position:relative;
+    -webkit-user-select:none; user-select:none;
+  }
+  .card{ width:100%; max-width:440px; position:relative; z-index:2; }
+  .eyebrow{ font-size:.95rem; opacity:.82; margin:0 0 14px; }
+  h1{
+    font-family:"Fraunces",Georgia,serif; font-weight:600;
+    font-size:clamp(2.1rem, 8vw, 3rem); line-height:1.08; margin:0 0 8px; text-wrap:balance;
+  }
+  .sub{ font-size:1.02rem; line-height:1.5; opacity:.85; margin:0 auto 34px; max-width:30ch; }
+  .buttons{ display:flex; gap:16px; justify-content:center; align-items:center; flex-wrap:wrap; }
+  button{
+    font-family:inherit; font-size:1.15rem; border:0; border-radius:999px;
+    padding:16px 30px; cursor:pointer;
+    transition:transform .18s ease, box-shadow .25s ease, background .2s ease;
+    touch-action:manipulation;
+  }
+  #yes{
+    background:linear-gradient(135deg, var(--coral), var(--coral-lo)); color:#fff;
+    font-weight:600; box-shadow:0 10px 30px rgba(255,77,117,.45);
+  }
+  #yes:active{ transform:scale(.98); }
+  #no{
+    background:rgba(255,255,255,.14); color:var(--cream);
+    border:1px solid rgba(255,255,255,.28); backdrop-filter:blur(4px);
+  }
+  #toast{
+    position:fixed; left:50%; bottom:34px; transform:translate(-50%,24px);
+    background:rgba(20,6,20,.9); color:#ffd7df; border:1px solid rgba(255,111,145,.5);
+    padding:12px 18px; border-radius:14px; font-size:.95rem; max-width:88vw;
+    opacity:0; pointer-events:none; transition:opacity .25s ease, transform .25s ease; z-index:20;
+  }
+  #toast.show{ opacity:1; transform:translate(-50%,0); }
+  #toast .code{ opacity:.6; }
+  #reveal{
+    position:fixed; inset:0; display:none; align-items:center; justify-content:center;
+    padding:28px; z-index:30;
+    background:
+      radial-gradient(120% 90% at 50% -10%, #45215a 0%, transparent 55%),
+      linear-gradient(170deg, var(--plum) 0%, var(--wine) 52%, var(--rose) 100%);
+  }
+  #reveal.show{ display:flex; animation:fade .5s ease; }
+  @keyframes fade{ from{opacity:0} to{opacity:1} }
+  #reveal h2{ font-family:"Fraunces",Georgia,serif; font-weight:600; font-size:clamp(2rem,8vw,2.8rem); margin:0 0 18px; }
+  .plan{ background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.2); border-radius:20px; padding:22px 24px; line-height:1.6; }
+  .plan .big{ font-size:1.5rem; font-weight:600; }
+  .plan .note{ opacity:.85; font-size:.98rem; margin-top:10px; }
+  .heart{ position:fixed; top:-40px; font-size:24px; pointer-events:none; z-index:10; will-change:transform; }
+</style>
+</head>
+<body>
+
+  <div class="card" id="card">
+    <p class="eyebrow" id="eyebrow"></p>
+    <h1 id="question"></h1>
+    <p class="sub" id="sub"></p>
+    <div class="buttons">
+      <button id="yes">Yes, I'd love to</button>
+      <button id="no">No</button>
+    </div>
+  </div>
+
+  <div id="toast"><span class="code"></span> <span class="msg"></span></div>
+
+  <div id="reveal">
+    <div class="reveal-inner">
+      <h2 id="revealTitle"></h2>
+      <div class="plan">
+        <div class="big" id="planWhen"></div>
+        <div id="planWhere"></div>
+        <div class="note" id="planNote"></div>
+      </div>
+    </div>
+  </div>
+
+<script>
+  /* =========================================================
+     CONFIG — edit these to whatever you like.
+     ========================================================= */
+  const CONFIG = {
+    eyebrow:  "Hey you 💌",
+    question: "Will you go on a date with me today?",
+    sub:      "There's really only one right answer here.",
+    reveal: {
+      title: "It's a date 💛",
+      when:  "I'll pick you up at 2:20",
+      where: "",                       // leave "" to hide this line
+      note:  "Be ready, gorgeous — see you at 2:20. 💛"
+    }
+  };
+
+  const ERRORS = [
+    { code:"404", msg:"“No” not found." },
+    { code:"403", msg:"That button is off-limits." },
+    { code:"418", msg:"The answer is still yes." },
+    { code:"500", msg:"“No” crashed. Try “Yes”?" },
+    { code:"429", msg:"Too many attempts. Please say yes." },
+    { code:"⚠",   msg:"Rejection module unavailable." },
+  ];
+
+  // ---- apply config ----
+  const $ = id => document.getElementById(id);
+  $('eyebrow').textContent  = CONFIG.eyebrow;
+  $('question').textContent = CONFIG.question;
+  $('sub').textContent      = CONFIG.sub;
+  $('revealTitle').textContent = CONFIG.reveal.title;
+  $('planWhen').textContent = CONFIG.reveal.when;
+  $('planNote').textContent = CONFIG.reveal.note;
+  if (CONFIG.reveal.where) $('planWhere').textContent = CONFIG.reveal.where;
+  else $('planWhere').style.display = 'none';
+  document.title = CONFIG.question;
+
+  const no    = $('no');
+  const yes   = $('yes');
+  const toast = $('toast');
+  let dodges  = 0;
+
+  function showToast(){
+    const e = ERRORS[Math.min(dodges, ERRORS.length - 1)];
+    toast.querySelector('.code').textContent = 'Error ' + e.code + ':';
+    toast.querySelector('.msg').textContent  = e.msg;
+    toast.classList.add('show');
+    clearTimeout(showToast._t);
+    showToast._t = setTimeout(()=>toast.classList.remove('show'), 1500);
+  }
+
+  // Move the No button to a random spot, staying inside the *visible* viewport
+  // (uses visualViewport so it never hides under the phone's address bar/notch),
+  // and biased away from wherever her finger just was.
+  function flee(fromX, fromY){
+    dodges++;
+    showToast();
+
+    if (no.style.position !== 'fixed'){
+      const r = no.getBoundingClientRect();
+      no.style.position = 'fixed';
+      no.style.margin = '0';
+      no.style.left = r.left + 'px';
+      no.style.top  = r.top + 'px';
+    }
+
+    const vv  = window.visualViewport;
+    const vw  = vv ? vv.width  : window.innerWidth;
+    const vh  = vv ? vv.height : window.innerHeight;
+    const ox  = vv ? vv.offsetLeft : 0;
+    const oy  = vv ? vv.offsetTop  : 0;
+    const pad = 14;
+    const w = no.offsetWidth, h = no.offsetHeight;
+
+    let x, y, tries = 0;
+    do {
+      x = ox + pad + Math.random() * Math.max(1, vw - w - pad*2);
+      y = oy + pad + Math.random() * Math.max(1, vh - h - pad*2);
+      tries++;
+    } while (fromX != null &&
+             Math.hypot((x + w/2) - fromX, (y + h/2) - fromY) < 140 &&
+             tries < 25);
+
+    no.style.left = x + 'px';
+    no.style.top  = y + 'px';
+
+    const shrink = Math.max(0.55, 1 - dodges * 0.07);
+    no.style.transform  = 'scale(' + shrink + ')';
+    yes.style.transform = 'scale(' + Math.min(1.35, 1 + dodges * 0.05) + ')';
+
+    if (dodges === 3) no.textContent = "No?";
+    if (dodges === 6) no.textContent = "still no?";
+    if (dodges === 9) no.textContent = "🙃";
+  }
+
+  // --- Mobile: dodge when her finger lands on OR near the button ---
+  // Watching the whole document by touch coordinates is what makes it reliably
+  // "run away" on a phone, since there's no hover to trigger on.
+  document.addEventListener('touchstart', function(e){
+    if (e.target === yes || yes.contains(e.target)) return;   // never block Yes
+    const t = e.touches[0]; if (!t) return;
+    const r = no.getBoundingClientRect();
+    const cx = r.left + r.width/2, cy = r.top + r.height/2;
+    const near = Math.hypot(t.clientX - cx, t.clientY - cy) < Math.max(r.width, 80);
+    if (near){
+      e.preventDefault();      // cancels the tap so "No" can never register
+      flee(t.clientX, t.clientY);
+    }
+  }, { passive:false });
+
+  // --- Desktop fallbacks ---
+  no.addEventListener('mouseenter', ()=>flee());
+  no.addEventListener('mousedown', e=>{ e.preventDefault(); flee(e.clientX, e.clientY); });
+  no.addEventListener('click',     e=>{ e.preventDefault(); flee(); });
+
+  // --- Yes ---
+  function rainHearts(){
+    const glyphs = ['💛','💗','💖','❤️','✨','🌸'];
+    for (let i=0;i<28;i++){
+      const s = document.createElement('div');
+      s.className = 'heart';
+      s.textContent = glyphs[Math.floor(Math.random()*glyphs.length)];
+      s.style.left = Math.random()*100 + 'vw';
+      s.style.fontSize = (16 + Math.random()*26) + 'px';
+      document.body.appendChild(s);
+      const dur = 2200 + Math.random()*2200;
+      const drift = (Math.random()*2-1)*120;
+      s.animate([
+        { transform:'translate(0,0) rotate(0deg)', opacity:1 },
+        { transform:'translate('+drift+'px,'+(window.innerHeight+120)+'px) rotate('+(Math.random()*720-360)+'deg)', opacity:1 }
+      ], { duration:dur, easing:'cubic-bezier(.4,0,.7,1)' });
+      setTimeout(()=>s.remove(), dur);
+    }
+  }
+  function sayYes(){
+    rainHearts();
+    setTimeout(()=>{ $('reveal').classList.add('show'); rainHearts(); }, 450);
+  }
+  yes.addEventListener('click', sayYes);
+</script>
+</body>
+</html>
